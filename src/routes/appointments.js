@@ -106,19 +106,29 @@ router.post(
 );
 
 // PUT /api/appointments/:id - sua thong tin lich hen (doi gio, ky thuat vien...)
+// Chi cho phep sua cac truong chi tiet khi lich hen con o trang thai "booked" (chua check-in)
 router.put(
   "/:id",
   asyncHandler(async (req, res) => {
-    const allowed = ["technician", "room", "serviceName", "startTime", "durationMinutes", "note", "status"];
+    const allowed = ["technician", "room", "serviceName", "startTime", "durationMinutes", "note", "status", "customerPackage"];
+    const detailFields = ["technician", "room", "serviceName", "startTime", "durationMinutes", "note", "customerPackage"];
     const update = {};
     for (const key of allowed) {
       if (req.body[key] !== undefined) update[key] = req.body[key];
     }
+
+    const existing = await Appointment.findById(req.params.id);
+    if (!existing) return res.status(404).json({ message: "Khong tim thay lich hen" });
+
+    const touchesDetails = detailFields.some((key) => update[key] !== undefined);
+    if (touchesDetails && existing.status !== "booked") {
+      return res.status(400).json({ message: "Chi co the sua lich hen khi chua check-in" });
+    }
+
     const appointment = await Appointment.findByIdAndUpdate(req.params.id, update, {
       new: true,
       runValidators: true,
     });
-    if (!appointment) return res.status(404).json({ message: "Khong tim thay lich hen" });
     res.json(appointment);
   })
 );
@@ -214,6 +224,20 @@ router.post(
     appointment.status = "cancelled";
     await appointment.save();
     res.json(appointment);
+  })
+);
+
+// DELETE /api/appointments/:id - chi cho phep xoa han cac lich hen da bi huy
+router.delete(
+  "/:id",
+  asyncHandler(async (req, res) => {
+    const appointment = await Appointment.findById(req.params.id);
+    if (!appointment) return res.status(404).json({ message: "Khong tim thay lich hen" });
+    if (appointment.status !== "cancelled") {
+      return res.status(400).json({ message: "Chi co the xoa lich hen da huy" });
+    }
+    await appointment.deleteOne();
+    res.json({ success: true });
   })
 );
 

@@ -66,6 +66,7 @@ router.get(
 
     const appointments = await Appointment.find({ customer: customer._id })
       .populate("technician", "fullName")
+      .populate("customerPackage", "packageNameSnapshot")
       .sort({ startTime: -1 })
       .lean();
 
