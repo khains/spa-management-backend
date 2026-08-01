@@ -153,4 +153,34 @@ router.post(
   })
 );
 
+// PUT /api/customers/:id/notes/:noteId - sua noi dung ghi chu noi bo
+router.put(
+  "/:id/notes/:noteId",
+  asyncHandler(async (req, res) => {
+    const { content } = req.body;
+    if (!content) return res.status(400).json({ message: "Thieu noi dung ghi chu" });
+    const customer = await Customer.findById(req.params.id);
+    if (!customer) return res.status(404).json({ message: "Khong tim thay khach hang" });
+    const note = customer.internalNotes.id(req.params.noteId);
+    if (!note) return res.status(404).json({ message: "Khong tim thay ghi chu" });
+    note.content = content;
+    await customer.save();
+    res.json(note);
+  })
+);
+
+// DELETE /api/customers/:id/notes/:noteId - xoa ghi chu noi bo
+router.delete(
+  "/:id/notes/:noteId",
+  asyncHandler(async (req, res) => {
+    const customer = await Customer.findById(req.params.id);
+    if (!customer) return res.status(404).json({ message: "Khong tim thay khach hang" });
+    const note = customer.internalNotes.id(req.params.noteId);
+    if (!note) return res.status(404).json({ message: "Khong tim thay ghi chu" });
+    note.deleteOne();
+    await customer.save();
+    res.json({ success: true });
+  })
+);
+
 module.exports = router;
