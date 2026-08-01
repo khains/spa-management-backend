@@ -186,15 +186,33 @@ router.post(
 );
 
 // POST /api/appointments/:id/cancel
+// Neu lich hen da check-in (hoac da hoan tat) va co gan goi lieu trinh, buoi da bi tru se duoc hoan lai
 router.post(
   "/:id/cancel",
   asyncHandler(async (req, res) => {
-    const appointment = await Appointment.findByIdAndUpdate(
-      req.params.id,
-      { status: "cancelled" },
-      { new: true }
-    );
+    const appointment = await Appointment.findById(req.params.id);
     if (!appointment) return res.status(404).json({ message: "Khong tim thay lich hen" });
+    if (appointment.status === "cancelled") {
+      return res.status(400).json({ message: "Lich hen nay da bi huy truoc do" });
+    }
+
+    // Buoi chi bi tru vao goi khi check-in (xem doCheckIn), nen chi hoan lai
+    // neu lich hen dang o trang thai da check-in hoac da hoan tat
+    const sessionWasDeducted = appointment.status === "checked_in" || appointment.status === "completed";
+
+    if (sessionWasDeducted && appointment.customerPackage) {
+      const pkg = await CustomerPackage.findById(appointment.customerPackage);
+      if (pkg && pkg.sessionsUsed > 0) {
+        pkg.sessionsUsed -= 1;
+        if (pkg.status === "completed") {
+          pkg.status = "active";
+        }
+        await pkg.save();
+      }
+    }
+
+    appointment.status = "cancelled";
+    await appointment.save();
     res.json(appointment);
   })
 );
