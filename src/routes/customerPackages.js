@@ -151,4 +151,18 @@ router.put(
   })
 );
 
+// DELETE /api/customer-packages/:id - chi cho phep xoa neu goi chua dung buoi nao
+router.delete(
+  "/:id",
+  asyncHandler(async (req, res) => {
+    const pkg = await CustomerPackage.findById(req.params.id);
+    if (!pkg) return res.status(404).json({ message: "Khong tim thay goi cua khach" });
+    if (pkg.sessionsUsed > 0) {
+      return res.status(400).json({ message: "Chi co the xoa goi chua su dung buoi nao" });
+    }
+    await pkg.deleteOne();
+    res.json({ success: true });
+  })
+);
+
 module.exports = router;
